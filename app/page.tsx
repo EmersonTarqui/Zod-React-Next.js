@@ -1,65 +1,73 @@
-"use client"
+"use client";
 
-import { useEffect } from "react";
-import { z } from "zod";
-import { perfilSchema } from "@/lib/schemas/schema";
+import { useState } from "react";
+import { criarUsuario } from "./actions/cadastrar";
 
-// definindo o tipo do dado de perfil automaticamente com base no schema criado
-type DadosPerfil = z.infer<typeof perfilSchema>;
+type ErrosCampos = {
+  nome?: string[];
+  email?: string[];
+  senha?: string[];
+};
 
-export default function Home() {
-  
-  useEffect(() => {
-    // função para validar e tratar erros com safeParse e flatten
-    const validarPerfil = (dados: DadosPerfil) => {
-      // Passo 1: Executar a validação segura
-      const resultado = perfilSchema.safeParse(dados);
+export default function PaginaCadastro() {
+  const [erros, setErros] = useState<ErrosCampos | null>(null);
+  const [sucesso, setSucesso] = useState(false);
 
-      // Passo 2: Verificar se deu certo
-      if (!resultado.success) {
-        // Passo 3: Extrair erros por campo usando .flatten().fieldErrors
-        const erros = resultado.error.flatten().fieldErrors;
-        console.log("Erros encontrados:", erros);
-      } else {
-        // Passo 4: Usar os dados com tipagem garantida
-        console.log("Usuário criado com sucesso:", resultado.data);
-      }
-    };
+  async function handleSubmit(formData: FormData) {
+    setSucesso(false);
+    setErros(null);
 
-    console.log("INICIANDO TESTES DA MISSAO 2");
+    // Chamando a server action
+    const resultado = await criarUsuario(formData);
 
-    // Cenário 1: dados totalmente válidos
-    const caso1: DadosPerfil = { 
-      nome: "Emerson", 
-      bio: "Dev Fullstack",
-      email: "contato@emerson.dev" 
-    };
-    console.log("teste 1 (sucesso esperado):");
-    validarPerfil(caso1);
-
-    // Cenário 2: dados com um campo errado (nome < 2 caracteres)
-    const caso2 = { 
-      nome: "E", 
-      bio: "Estudante de TSI" 
-    } as DadosPerfil;
-    console.log("\nteste 2 (erro no nome):");
-    validarPerfil(caso2);
-
-    // Cenário 3: dados com múltiplos erros (bio > 160 e site inválido)
-    const caso3 = {
-      nome: "Emerson",
-      bio: "a".repeat(161),
-      site: "www.google.com" //falta https:// antes de www.google.com
-    } as DadosPerfil;
-    console.log("\nteste 3 (múltiplos erros):");
-    validarPerfil(caso3);
-
-  }, []);
+    if (resultado.erro) {
+      // Se a validação falhar, salva os fieldErrors no estado
+      setErros(resultado.erro);
+    } else {
+      // Se passar, mostra o sucesso e reseta o estado
+      setSucesso(true);
+    }
+  }
 
   return (
-    <main className="p-10">
-      <h1 className="text-2xl font-bold">Atividade safeParse</h1>
-      <p>Verifique o console (F12) para ver os 3 cenários de teste da Missão 2.</p>
+    <main className="p-10 flex flex-col items-center min-h-screen bg-gray-100">
+      <div className="bg-white p-6 rounded shadow-md w-full max-w-sm">
+        <h1 className="text-xl font-bold mb-4 text-black">Cadastro - Missão 3</h1>
+
+        {/* A action do formulário chama a função que lida com a Server Action */}
+        <form action={handleSubmit} className="space-y-4">
+          
+          <div className="flex flex-col">
+            <label className="font-bold text-sm text-gray-700">Nome:</label>
+            <input name="nome" className="border p-2 rounded text-black bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+            {/* Exibe o erro específico do campo logo abaixo do input */}
+            {erros?.nome && <span className="text-red-500 text-xs mt-1 font-semibold">{erros.nome[0]}</span>}
+          </div>
+
+          <div className="flex flex-col">
+            <label className="font-bold text-sm text-gray-700">E-mail:</label>
+            <input name="email" type="email" className="border p-2 rounded text-black bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+            {erros?.email && <span className="text-red-500 text-xs mt-1 font-semibold">{erros.email[0]}</span>}
+          </div>
+
+          <div className="flex flex-col">
+            <label className="font-bold text-sm text-gray-700">Senha:</label>
+            <input name="senha" type="password" className="border p-2 rounded text-black bg-white focus:ring-2 focus:ring-blue-500 outline-none" />
+            {erros?.senha && <span className="text-red-500 text-xs mt-1 font-semibold">{erros.senha[0]}</span>}
+          </div>
+
+          <button type="submit" className="w-full bg-blue-600 text-white p-2 rounded font-bold hover:bg-blue-700 transition-colors">
+            Cadastrar
+          </button>
+
+          {/* Feedback visual de sucesso */}
+          {sucesso && (
+            <p className="text-green-600 font-bold text-center mt-2 p-2 bg-green-50 rounded border border-green-200">
+               Cadastro validado no servidor!
+            </p>
+          )}
+        </form>
+      </div>
     </main>
   );
 }
